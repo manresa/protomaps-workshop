@@ -57,8 +57,11 @@
                     },
                     shaded_relief: {
                        type: "raster",
-                       tiles: ["pmtiles://./sf_topo_bathy_dem_webmercator_hillshade_combined.pmtiles/{z}/{x}/{y}"],
-                       tileSize: 512,
+                       // tiles: ["pmtiles://./sf_topo_bathy_dem_webmercator_hillshade_combined.pmtiles/{z}/{x}/{y}"],
+                       // https://SUBDOMAIN.cloudfront.net/TILESET/{z}/{x}/{y}.{ext}
+                       // tiles: "https://d1ac8r9po1b36j.cloudfront.net/sf_topo_bathy_dem_webmercator_hillshade_combined/{z}/{x}/{y}.{png}"
+                        tiles: "https://d1ac8r9po1b36j.cloudfront.net/sf_topo_bathy_dem_webmercator_hillshade_combined/0/0/0.<mvt | png>"
+                        tileSize: 512,
                        attribution: "USGS National Elevation Dataset",
                     },
                 },
