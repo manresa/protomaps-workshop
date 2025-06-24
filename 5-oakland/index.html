@@ -1,0 +1,223 @@
+<html>
+
+<head>
+    <title>Protomaps - East Bay Hazards</title>
+    <meta charset="utf-8" />
+    <script src="https://unpkg.com/maplibre-gl@^5.2.0/dist/maplibre-gl.js"></script>
+    <link href="https://unpkg.com/maplibre-gl@^5.2.0/dist/maplibre-gl.css" rel="stylesheet" />
+    <script src="https://unpkg.com/pmtiles@4.2.1/dist/pmtiles.js"></script>
+    <script src="https://unpkg.com/@protomaps/basemaps@5.0.0/dist/basemaps.js"></script>
+    <style>
+        body {
+            margin: 0;
+        }
+
+        #map {
+            height: 100%;
+            width: 100%;
+        }
+    </style>
+</head>
+
+<body>
+    <div id="map"></div>
+    <script type="text/javascript">
+        let protocol = new pmtiles.Protocol();
+        maplibregl.addProtocol("pmtiles", protocol.tile);
+
+        const map = new maplibregl.Map({
+            container: "map",
+            zoom: 12,
+            center: [-122.1, 37.85],
+            style: {
+                version: 8,
+                glyphs: "https://protomaps.github.io/basemaps-assets/fonts/{fontstack}/{range}.pbf",
+                sprite: `https://protomaps.github.io/basemaps-assets/sprites/v4/light`,
+                sources: {
+                    basemap: {
+                        type: "vector",
+                        url: "pmtiles://./basemap-eastbay.pmtiles",
+                        attribution: "<a href='https://protomaps.com'>Protomaps</a> <a href='https://openstreetmap.org/copyright'>© OpenStreetMap Contributors</a>"
+                    },
+                    landslides: {
+                       type: "geojson",
+                       data: "./eastbay_usgs_existing_landslide_areas_nudged_clip.geojson"
+                    },
+                    alquist_priolo_fault_zones: {
+                       type: "geojson",
+                       data: "./eastbay_Alquist_Priolo_Fault_Zones.geojson"
+                    },
+                    eastbay_earthquakes: {
+                       type: "geojson",
+                       data: "./eastbay_earthquakes_1967.geojson"
+                    },
+                    quartenary_faults: {
+                       type: "geojson",
+                       data: "./eastbay_qfaults_database.geojson"
+                    },
+                    shaded_relief: {
+                       type: "raster",
+                       tiles: ["pmtiles://./sf_topo_bathy_dem_webmercator_hillshade_combined.pmtiles/{z}/{x}/{y}"],
+                       tileSize: 512,
+                       attribution: "USGS National Elevation Dataset",
+                    },
+                },
+                layers: [
+                    ...basemaps.layers("basemap", basemaps.namedFlavor("white")),
+                    {
+                        id: "shaded_relief_layer",
+                        source: "shaded_relief",
+                        type: "raster",
+                        paint: {
+                            "raster-opacity": 0.5,
+                        }
+                        // 'minzoom': 11,
+                        // 'maxzoom': 15                       
+                    },
+                    {
+                        id: "landslide_layer",
+                        source: "landslides",
+                        type: "fill",
+                        'paint': {
+                            "fill-color": [
+                                "match",
+                                ["get", "ptype"],
+                                "surficial deposits", "#fef0d9",
+                                "few landslides", "#fdcc8a",
+                                "mostly landslide", "#fc8d59",
+                                "#eeffee"        // default color if no match
+                            ],
+                            'fill-opacity': 0.4,
+                            'fill-outline-color': "rgba(0, 0, 0, 0)"
+                        }                        
+                    },
+                    {
+                        id: "alquist_priolo_layer",
+                        source: "alquist_priolo_fault_zones",
+                        type: "fill",
+                        paint: {
+                            "fill-color": "#dd3497",
+                            'fill-opacity': 0.3,
+                            'fill-outline-color': "rgba(0, 0, 0, 0)"
+                        }
+                    },
+                    {
+                        id: "earthquakes_layer",
+                        source: "eastbay_earthquakes",
+                        type: "circle",
+                        paint: {
+                            "circle-blur": 0,
+                            "circle-color": "#ae017e",
+                            "circle-opacity": 0.7,
+                            "circle-radius": [
+                            "interpolate", ["linear"], ["zoom"],
+                            // when zoom is 0, set each feature's circle radius to the value of its "rating" property
+                            0, ["get", "Magnitude"],
+                            // when zoom is 4, set each feature's circle radius to 2 times the value of its "rating" property
+                            4, ["*", 2, ["get", "Magnitude"]]
+                        ],
+                            "circle-stroke-color": "#000000",
+                            "circle-stroke-opacity": 0.0,
+                            "circle-stroke-width": 0,
+                        },
+                        minzoom: 10,
+                        maxzoom: 17,
+                    },
+                    {
+                        id: "fault_layer",
+                        source: "quartenary_faults",
+                        type: "line",
+                        paint: {
+                            "line-color": "#7a0177",
+                            "line-width": 2,
+                        }
+                    },
+                    ...basemaps.layers("basemap", basemaps.namedFlavor("white"), { lang: "en", labelsOnly: true })
+                ]
+            },
+        });
+
+        map.addControl(new maplibregl.NavigationControl({
+            showZoom: true,
+            showCompass: false
+        }));
+
+    map.fitBounds([
+            [-122.3,37.8],
+            [-122.1,37.9]
+        ], { padding: 20 });
+    
+        // start of LANDSLIDE popup code ...
+
+        // Create a popup, but don't add it to the map yet.
+        const popup = new maplibregl.Popup({
+            closeButton: false,
+            closeOnClick: false
+        });
+
+        // if the cursor moves into "landslide_layer" do stuff!
+        map.on("mousemove", "landslide_layer", (e) => {
+            // Change the cursor style 
+            map.getCanvas().style.cursor = "pointer";
+
+            // Get mouse coordinates
+            const coordinates = e.lngLat;
+
+            // get the information from the zone at those coordinates
+            const label = e.features[0].properties.maplbl || "not needed";
+
+            // Make the popup text
+            const description = `<b>${label}</b>`
+
+            // Populate the popup and set its coordinates
+            // based on the feature found.
+            popup.setLngLat(coordinates).setHTML(description).addTo(map);
+        });
+
+        // When we leave "other_layer," make the popup disappear
+        map.on("mouseleave", "landslide_layer", () => {
+            map.getCanvas().style.cursor = "";
+            popup.remove();
+        });
+
+        // ... end of LANDSLIDE popup code
+
+        // start of FAULT popup code ...
+
+        // Create a popup, but don't add it to the map yet.
+        const fault_popup = new maplibregl.Popup({
+            closeButton: false,
+            closeOnClick: false
+        });
+
+        // if the cursor moves into "fault_layer" do stuff!
+        map.on("mousemove", "fault_layer", (e) => {
+            // Change the cursor style 
+            map.getCanvas().style.cursor = "pointer";
+
+            // Get mouse coordinates
+            const coordinates = e.lngLat;
+
+            // get the information from the zone at those coordinates
+            const fault_label = e.features[0].properties.fault_name || "not needed";
+
+            // Make the popup text
+            const description = `<b><i>${fault_label}</i></b>`
+
+            // Populate the popup and set its coordinates
+            // based on the feature found.
+            fault_popup.setLngLat(coordinates).setHTML(description).addTo(map);
+        });
+
+        // When we leave "other_layer," make the popup disappear
+        map.on("mouseleave", "fault_layer", () => {
+            map.getCanvas().style.cursor = "";
+            fault_popup.remove();
+        });
+
+        // ... end of popup code
+
+    </script>
+</body>
+
+</html>
