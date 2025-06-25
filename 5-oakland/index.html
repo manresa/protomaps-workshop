@@ -27,7 +27,7 @@
 
         const map = new maplibregl.Map({
             container: "map",
-            zoom: 12,
+            zoom: 13,
             center: [-122.1, 37.85],
             style: {
                 version: 8,
@@ -36,7 +36,8 @@
                 sources: {
                     basemap: {
                         type: "vector",
-                        url: "pmtiles://./basemap-eastbay.pmtiles",
+                        // url: "pmtiles://./basemap-eastbay.pmtiles",
+                        url: "https://d1ac8r9po1b36j.cloudfront.net/basemap-eastbay.json",
                         attribution: "<a href='https://protomaps.com'>Protomaps</a> <a href='https://openstreetmap.org/copyright'>© OpenStreetMap Contributors</a>"
                     },
                     landslides: {
@@ -56,11 +57,15 @@
                        data: "./eastbay_qfaults_database.geojson"
                     },
                     shaded_relief: {
-                       type: "raster",
-                       tiles: ["pmtiles://./sf_topo_bathy_dem_webmercator_hillshade_combined.pmtiles/{z}/{x}/{y}"],
-                       tileSize: 512,
-                       attribution: "USGS National Elevation Dataset",
-                    },
+                        type: "raster",
+                        // tiles: ["https://d1ac8r9po1b36j.cloudfront.net/sf_topo_bathy_dem_webmercator_hillshade_combined/{z}/{x}/{y}.{png}"],
+                        // tiles: ["pmtiles://./sf_topo_bathy_dem_webmercator_hillshade_combined.pmtiles/{z}/{x}/{y}"],
+                        // url: "pmtiles://./sf_topo_bathy_dem_webmercator_hillshade_combined.pmtiles",
+                        url: "https://d1ac8r9po1b36j.cloudfront.net/sf_topo_bathy_dem_webmercator_hillshade_combined.json",
+                        // https://SUBDOMAIN.cloudfront.net/TILESET/{z}/{x}/{y}.{ext}
+                        // tileSize: 512,
+                        attribution: "USGS National Elevation Dataset",
+                        },
                 },
                 layers: [
                     ...basemaps.layers("basemap", basemaps.namedFlavor("white")),
@@ -69,7 +74,7 @@
                         source: "shaded_relief",
                         type: "raster",
                         paint: {
-                            "raster-opacity": 0.5,
+                            "raster-opacity": 0.4,
                         }
                         // 'minzoom': 11,
                         // 'maxzoom': 15                       
@@ -112,9 +117,9 @@
                             "circle-radius": [
                             "interpolate", ["linear"], ["zoom"],
                             // when zoom is 0, set each feature's circle radius to the value of its "rating" property
-                            0, ["get", "Magnitude"],
+                            11, ["get", "Magnitude"],
                             // when zoom is 4, set each feature's circle radius to 2 times the value of its "rating" property
-                            4, ["*", 2, ["get", "Magnitude"]]
+                            17, ["*", 8, ["get", "Magnitude"]]
                         ],
                             "circle-stroke-color": "#000000",
                             "circle-stroke-opacity": 0.0,
